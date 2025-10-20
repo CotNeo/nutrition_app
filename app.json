@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Nutrition App",
+    "slug": "nutrition-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#4CAF50"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nutritionapp"
+    },
+    "android": {
+      "package": "com.nutritionapp"
+    }
+  }
+}
+
