@@ -10,12 +10,12 @@ Modern React Native uygulaması ile günlük beslenmenizi takip edin, hedeflerin
 ## 📱 Ekran Görüntüleri
 
 ```
-🔐 Auth Screen        📊 Dashboard           🎯 Goal Setup
-┌──────────────┐     ┌──────────────┐      ┌──────────────┐
-│ Google ile   │     │ 🔥 7 Gün     │      │ Hedeflerini  │
-│ Apple ile    │     │ Takvim       │      │ Belirle      │
-│ Email ile    │     │ Progress     │      │ BMR & TDEE   │
-└──────────────┘     └──────────────┘      └──────────────┘
+🔐 Auth Screen        📊 Dashboard           🎯 Goal Setup        🍽️ Meal Add
+┌──────────────┐     ┌──────────────┐      ┌──────────────┐     ┌──────────────┐
+│ Google ile   │     │ 🔥 7 Gün     │      │ Hedeflerini  │     │ Besin Ara    │
+│ Apple ile    │     │ Takvim       │      │ Belirle      │     │ Porsiyon     │
+│ Email ile    │     │ Progress     │      │ BMR & TDEE   │     │ Favoriler    │
+└──────────────┘     └──────────────┘      └──────────────┘     └──────────────┘
 ```
 
 ## ✨ Özellikler
@@ -34,6 +34,16 @@ Modern React Native uygulaması ile günlük beslenmenizi takip edin, hedeflerin
 - ✅ **Kişiselleştirilmiş hedefler**
 - ✅ **Pull-to-refresh**
 - ✅ **Gerçek zamanlı güncellemeler**
+
+### 🍽️ Öğün Yönetimi
+- ✅ **Öğün ekleme** - Manuel veya veritabanından
+- ✅ **60+ Türk mutfağı besini** - Gerçekçi porsiyonlarla
+- ✅ **Akıllı arama** - İsme göre anlık filtreleme
+- ✅ **Kategori filtreleme** - 9 farklı kategori
+- ✅ **Porsiyon ayarlama** - 0.5x - 3x arası seçim
+- ✅ **Son kullanılanlar** - Hızlı erişim
+- ✅ **Favori besinler** - Sık kullanılan besinleri kaydet
+- ✅ **Öğün geçmişi** - Tarihe göre gruplama ve silme
 
 ### 🎯 Kalori Hesaplama
 - ✅ **BMR** hesaplama (Mifflin-St Jeor)
@@ -102,16 +112,21 @@ nutrition_app/
 │   │   ├── ProgressBar.tsx
 │   │   ├── StatCard.tsx
 │   │   ├── StreakCard.tsx
-│   │   └── WeeklyCalendar.tsx
+│   │   ├── WeeklyCalendar.tsx
+│   │   └── FoodSearchModal.tsx
 │   ├── screens/          # Ekranlar
 │   │   ├── AuthScreen.tsx
 │   │   ├── HomeScreen.tsx
-│   │   └── GoalSetupScreen.tsx
+│   │   ├── GoalSetupScreen.tsx
+│   │   ├── MealAddScreen.tsx
+│   │   └── MealHistoryScreen.tsx
 │   ├── services/         # İş mantığı
 │   │   ├── authService.ts
 │   │   ├── nutritionService.ts
 │   │   ├── calorieCalculator.ts
-│   │   └── streakService.ts
+│   │   ├── streakService.ts
+│   │   ├── foodDatabase.ts
+│   │   └── foodHistoryService.ts
 │   ├── contexts/         # React Context
 │   │   └── AuthContext.tsx
 │   ├── utils/            # Yardımcı araçlar
@@ -180,23 +195,30 @@ npx tsc --noEmit
 
 ## 📊 Özellik Roadmap
 
-### ✅ Tamamlandı (v1.0)
+### ✅ Tamamlandı (v1.5)
 - [x] Authentication sistemi
 - [x] Modern dashboard
 - [x] Kalori hesaplama
 - [x] Streak sistemi
 - [x] Haftalık takvim
 - [x] Progress tracking
+- [x] **Öğün ekleme ekranı** 🆕
+- [x] **Besin veritabanı (60+ besin)** 🆕
+- [x] **Besin arama ve filtreleme** 🆕
+- [x] **Porsiyon ayarlama** 🆕
+- [x] **Son kullanılanlar & Favoriler** 🆕
+- [x] **Öğün geçmişi** 🆕
 
 ### 🔄 Devam Eden
-- [ ] Öğün ekleme ekranı
-- [ ] Besin veritabanı
-- [ ] Geçmiş görüntüleme
 - [ ] Grafik ve raporlar
+- [ ] İstatistikler sayfası
+- [ ] Haftalık/Aylık özet
 
 ### 🚀 Gelecek
 - [ ] Barcode scanner
 - [ ] Cloud sync
+- [ ] Kullanıcının kendi besinlerini eklemesi
+- [ ] API entegrasyonu (Edamam, USDA)
 - [ ] Social sharing
 - [ ] Dark mode
 - [ ] Multi-language

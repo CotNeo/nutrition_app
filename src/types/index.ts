@@ -42,6 +42,19 @@ export interface NutritionGoals {
   dailyFat: number;
 }
 
+export interface Food {
+  id: string;
+  name: string;
+  category: 'meal' | 'protein' | 'carb' | 'fruit' | 'vegetable' | 'snack' | 'beverage' | 'dairy' | 'dessert';
+  calories: number; // per 100g or per serving
+  protein: number; // in grams per 100g or per serving
+  carbs: number; // in grams per 100g or per serving
+  fat: number; // in grams per 100g or per serving
+  servingSize: number; // in grams
+  servingUnit: string; // e.g., "porsiyon", "bardak", "adet"
+  emoji?: string;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;

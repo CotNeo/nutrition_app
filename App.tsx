@@ -7,6 +7,8 @@ import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import AuthScreen from './src/screens/AuthScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import GoalSetupScreen from './src/screens/GoalSetupScreen';
+import MealAddScreen from './src/screens/MealAddScreen';
+import MealHistoryScreen from './src/screens/MealHistoryScreen';
 import { Logger } from './src/utils/logger';
 
 const Stack = createNativeStackNavigator();
@@ -53,6 +55,16 @@ const Navigation: React.FC = () => {
               name="GoalSetup"
               component={GoalSetupScreen}
               options={{ title: 'Hedeflerini Belirle' }}
+            />
+            <Stack.Screen
+              name="MealAdd"
+              component={MealAddScreen}
+              options={{ title: 'Öğün Ekle' }}
+            />
+            <Stack.Screen
+              name="MealHistory"
+              component={MealHistoryScreen}
+              options={{ title: 'Öğün Geçmişi' }}
             />
           </>
         ) : (

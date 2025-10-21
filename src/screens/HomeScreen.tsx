@@ -335,12 +335,12 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
           <View style={styles.actionRow}>
             <Button
               title="🍽️ Öğün Ekle"
-              onPress={() => Logger.log('HomeScreen', 'Add Meal pressed')}
+              onPress={() => navigation.navigate('MealAdd')}
               style={[styles.actionButton, styles.halfButton]}
             />
             <Button
               title="📊 Geçmiş"
-              onPress={() => Logger.log('HomeScreen', 'View History pressed')}
+              onPress={() => navigation.navigate('MealHistory')}
               variant="secondary"
               style={[styles.actionButton, styles.halfButton]}
             />
