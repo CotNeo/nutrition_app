@@ -9,6 +9,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import GoalSetupScreen from './src/screens/GoalSetupScreen';
 import MealAddScreen from './src/screens/MealAddScreen';
 import MealHistoryScreen from './src/screens/MealHistoryScreen';
+import StatsScreen from './src/screens/StatsScreen';
 import { Logger } from './src/utils/logger';
 
 const Stack = createNativeStackNavigator();
@@ -28,7 +29,21 @@ const Navigation: React.FC = () => {
     );
   }
 
-  Logger.log('Navigation', 'Rendering', { isLoggedIn: !!user });
+  /**
+   * Check if user has completed their profile
+   * Required: age, weight, height, gender, goal
+   */
+  const isProfileComplete = user && 
+    user.age && 
+    user.weight && 
+    user.height && 
+    user.gender && 
+    user.goal;
+
+  Logger.log('Navigation', 'Rendering', { 
+    isLoggedIn: !!user,
+    isProfileComplete: !!isProfileComplete 
+  });
 
   return (
     <NavigationContainer>
@@ -43,8 +58,26 @@ const Navigation: React.FC = () => {
           },
         }}
       >
-        {user ? (
-          // Authenticated routes
+        {!user ? (
+          // 1. Not logged in -> Auth Screen
+          <Stack.Screen
+            name="Auth"
+            component={AuthScreen}
+            options={{ headerShown: false }}
+          />
+        ) : !isProfileComplete ? (
+          // 2. Logged in but profile incomplete -> Goal Setup (forced)
+          <Stack.Screen
+            name="GoalSetup"
+            component={GoalSetupScreen}
+            options={{ 
+              title: 'Hedeflerini Belirle',
+              headerLeft: () => null, // Disable back button
+              gestureEnabled: false, // Disable swipe back
+            }}
+          />
+        ) : (
+          // 3. Logged in and profile complete -> Main App
           <>
             <Stack.Screen
               name="Home"
@@ -54,7 +87,7 @@ const Navigation: React.FC = () => {
             <Stack.Screen
               name="GoalSetup"
               component={GoalSetupScreen}
-              options={{ title: 'Hedeflerini Belirle' }}
+              options={{ title: 'Hedeflerini Güncelle' }}
             />
             <Stack.Screen
               name="MealAdd"
@@ -66,14 +99,12 @@ const Navigation: React.FC = () => {
               component={MealHistoryScreen}
               options={{ title: 'Öğün Geçmişi' }}
             />
+            <Stack.Screen
+              name="Stats"
+              component={StatsScreen}
+              options={{ title: 'İstatistikler & Raporlar' }}
+            />
           </>
-        ) : (
-          // Unauthenticated routes
-          <Stack.Screen
-            name="Auth"
-            component={AuthScreen}
-            options={{ headerShown: false }}
-          />
         )}
       </Stack.Navigator>
       <StatusBar style="auto" />

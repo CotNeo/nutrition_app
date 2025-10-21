@@ -20,12 +20,14 @@ Modern React Native uygulaması ile günlük beslenmenizi takip edin, hedeflerin
 
 ## ✨ Özellikler
 
-### 🔐 Authentication
+### 🔐 Authentication & Onboarding
 - ✅ **Google ile giriş** (Official brand guideline)
 - ✅ **Apple ile giriş** (Official HIG)
 - ✅ **Email/Şifre ile giriş**
 - ✅ **Kayıt sistemi**
 - ✅ **Session yönetimi**
+- ✅ **Zorunlu hedef belirleme** - İlk giriş sonrası
+- ✅ **3 aşamalı kullanıcı akışı** (Login → Hedef → Ana Uygulama)
 
 ### 📊 Dashboard
 - ✅ **Haftalık takvim** - Swipe ve select
@@ -36,16 +38,31 @@ Modern React Native uygulaması ile günlük beslenmenizi takip edin, hedeflerin
 - ✅ **Gerçek zamanlı güncellemeler**
 
 ### 🍽️ Öğün Yönetimi
-- ✅ **Öğün ekleme** - Manuel veya veritabanından
+- ✅ **3 farklı ekleme yöntemi** 🆕
+  - 📷 Barkod okutma (OpenFoodFacts API)
+  - 🔍 Veritabanından arama (60+ besin)
+  - ✏️ Manuel giriş
+- ✅ **Barcode scanner** - Kamera ile ürün okutma 🆕
+- ✅ **2M+ ürün veritabanı** - OpenFoodFacts API 🆕
 - ✅ **60+ Türk mutfağı besini** - Gerçekçi porsiyonlarla
 - ✅ **Akıllı arama** - İsme göre anlık filtreleme
 - ✅ **Kategori filtreleme** - 9 farklı kategori
-- ✅ **Porsiyon ayarlama** - 0.5x - 3x arası seçim
+- ✅ **Hassas porsiyon kontrolü** - 0.1 - 10x arası, +/- butonlar, manuel giriş
+- ✅ **Genişletilmiş hızlı seçim** - 10 farklı porsiyon seçeneği
+- ✅ **Akıllı birim sistemi** 🆕
+  - 📏 6 farklı birim (gram, ml, adet, porsiyon, bardak, kaşık)
+  - 💧 Otomatik sıvı/katı algılama (barkod okutmada)
+  - ⚖️ Görsel birim gösterimi (emoji + açıklama)
+  - 🔄 Manuel birim değiştirme
+- ✅ **Dinamik kalori hesaplama** 🔥
+  - ⚡ Gramaj değişince otomatik güncelleme
+  - 📊 100g/100ml bazlı hassas hesaplama
+  - 🚫 Yanlış birim seçiminde uyarı (sıvı→gram, katı→ml)
 - ✅ **Son kullanılanlar** - Hızlı erişim
 - ✅ **Favori besinler** - Sık kullanılan besinleri kaydet
 - ✅ **Öğün geçmişi** - Tarihe göre gruplama ve silme
 
-### 🎯 Kalori Hesaplama
+### 🎯 Kalori Hesaplama & Planlama
 - ✅ **BMR** hesaplama (Mifflin-St Jeor)
 - ✅ **TDEE** hesaplama
 - ✅ **4 farklı hedef**:
@@ -53,7 +70,25 @@ Modern React Native uygulaması ile günlük beslenmenizi takip edin, hedeflerin
   - ⚖️ Kilomu Korumak
   - 🔺 Kilo Almak (+300 kcal/gün)
   - 💪 Kas Kazanmak (+500 kcal/gün)
+- ✅ **Akıllı Hedef Kilo Planlama** 🆕
+  - 3, 6, 9, 12 aylık plan seçenekleri
+  - Sağlık kontrolü (0.25-1kg/hafta)
+  - Otomatik kalori ve makro hesaplama
+  - Tahmini bitiş tarihi
 - ✅ **Makro besin dağılımı** (Protein, Karb, Yağ)
+
+### 📊 Grafik & Raporlar
+- ✅ **İstatistikler ekranı** - Detaylı analiz ve raporlar 🆕
+- ✅ **Kilo takip grafiği** - Ağırlık değişim geçmişi (Line Chart) 🆕
+- ✅ **Kilo girişi sistemi** - Modal ile kolay kilo kaydı 🆕
+- ✅ **Kalori trend grafiği** - Line chart ile 7/30 günlük takip 🆕
+- ✅ **Günlük kalori grafiği** - Bar chart karşılaştırması 🆕
+- ✅ **Makro dağılım grafiği** - Pie chart ile P/K/Y yüzdeleri 🆕
+- ✅ **Haftalık/Aylık özet** - Toplam ve ortalama değerler 🆕
+- ✅ **Öğün dağılımı** - Kahvaltı/Öğle/Akşam/Atıştırma analizi 🆕
+- ✅ **Trend analizi** - Kalori artış/azalış tespiti 🆕
+- ✅ **Zaman periyodu seçimi** - 7 veya 30 gün 🆕
+- ✅ **Kilo istatistikleri** - Mevcut/Değişim/Hedef gösterimi 🆕
 
 ### 🎨 Modern UI/UX
 - ✅ **Tailwind-inspired color palette**
@@ -61,6 +96,7 @@ Modern React Native uygulaması ile günlük beslenmenizi takip edin, hedeflerin
 - ✅ **Official brand buttons**
 - ✅ **Professional typography**
 - ✅ **Responsive design**
+- ✅ **Interactive charts** 🆕
 
 ## 🚀 Hızlı Başlangıç
 
@@ -113,20 +149,25 @@ nutrition_app/
 │   │   ├── StatCard.tsx
 │   │   ├── StreakCard.tsx
 │   │   ├── WeeklyCalendar.tsx
-│   │   └── FoodSearchModal.tsx
+│   │   ├── FoodSearchModal.tsx
+│   │   └── BarcodeScanner.tsx      # 🆕 Barkod okuyucu
 │   ├── screens/          # Ekranlar
 │   │   ├── AuthScreen.tsx
 │   │   ├── HomeScreen.tsx
 │   │   ├── GoalSetupScreen.tsx
 │   │   ├── MealAddScreen.tsx
-│   │   └── MealHistoryScreen.tsx
+│   │   ├── MealHistoryScreen.tsx
+│   │   └── StatsScreen.tsx          # 🆕 Grafik ve raporlar
 │   ├── services/         # İş mantığı
 │   │   ├── authService.ts
 │   │   ├── nutritionService.ts
 │   │   ├── calorieCalculator.ts
 │   │   ├── streakService.ts
 │   │   ├── foodDatabase.ts
-│   │   └── foodHistoryService.ts
+│   │   ├── foodHistoryService.ts
+│   │   ├── statsService.ts          # 🆕 İstatistik servisi
+│   │   ├── weightTrackingService.ts # 🆕 Kilo takip servisi
+│   │   └── barcodeService.ts        # 🆕 Barkod okuma servisi
 │   ├── contexts/         # React Context
 │   │   └── AuthContext.tsx
 │   ├── utils/            # Yardımcı araçlar
@@ -148,12 +189,15 @@ nutrition_app/
 
 | Kategori | Teknoloji |
 |----------|-----------|
-| Framework | React Native 0.74.5 |
-| Platform | Expo SDK 51.0.0 |
+| Framework | React Native 0.81.4 |
+| Platform | Expo SDK 54.0.13 |
 | Language | TypeScript 5.9.2 |
 | Navigation | React Navigation 6.x |
-| Storage | AsyncStorage 1.23.1 |
+| Storage | AsyncStorage 2.2.0 |
 | State | React Context API |
+| Charts | React Native Chart Kit 🆕 |
+| Barcode | Expo Camera (w/ barcode) 🆕 |
+| API | OpenFoodFacts (2M+ products) 🆕 |
 | Styling | StyleSheet + Custom System |
 
 ## 🎨 Design System
@@ -195,27 +239,37 @@ npx tsc --noEmit
 
 ## 📊 Özellik Roadmap
 
-### ✅ Tamamlandı (v1.5)
+### ✅ Tamamlandı (v1.6)
 - [x] Authentication sistemi
+- [x] **Zorunlu onboarding akışı** 🆕
+- [x] **3 aşamalı kullanıcı deneyimi** 🆕
+- [x] **Akıllı hedef kilo planlama (3-12 ay)** 🆕
+- [x] **4 plan seçeneği ve sağlık kontrolü** 🆕
 - [x] Modern dashboard
 - [x] Kalori hesaplama
 - [x] Streak sistemi
 - [x] Haftalık takvim
 - [x] Progress tracking
-- [x] **Öğün ekleme ekranı** 🆕
-- [x] **Besin veritabanı (60+ besin)** 🆕
-- [x] **Besin arama ve filtreleme** 🆕
-- [x] **Porsiyon ayarlama** 🆕
-- [x] **Son kullanılanlar & Favoriler** 🆕
-- [x] **Öğün geçmişi** 🆕
+- [x] Öğün ekleme ekranı
+- [x] Besin veritabanı (60+ besin)
+- [x] Besin arama ve filtreleme
+- [x] **Hassas porsiyon kontrolü (0.1 - 10x)** 🆕
+- [x] **Manuel porsiyon girişi** 🆕
+- [x] **Genişletilmiş hızlı seçim (10 seçenek)** 🆕
+- [x] Son kullanılanlar & Favoriler
+- [x] Öğün geçmişi
+- [x] **Grafik ve raporlar** 🆕
+- [x] **İstatistikler sayfası (Line/Bar/Pie charts)** 🆕
+- [x] **Haftalık/Aylık özet raporlar** 🆕
+- [x] **Kilo takip grafiği (ağırlık değişim geçmişi)** 🆕
+- [x] **Barcode scanner (OpenFoodFacts API)** 🆕
 
 ### 🔄 Devam Eden
-- [ ] Grafik ve raporlar
-- [ ] İstatistikler sayfası
-- [ ] Haftalık/Aylık özet
+- [ ] Hedef başarı oranı göstergesi
+- [ ] Haftalık karşılaştırma (bu hafta vs geçen hafta)
+- [ ] En çok yenen besinler
 
 ### 🚀 Gelecek
-- [ ] Barcode scanner
 - [ ] Cloud sync
 - [ ] Kullanıcının kendi besinlerini eklemesi
 - [ ] API entegrasyonu (Edamam, USDA)

@@ -13,7 +13,9 @@ import {
 } from 'react-native';
 import Button from '../components/Button';
 import FoodSearchModal from '../components/FoodSearchModal';
+import BarcodeScannerComponent from '../components/BarcodeScanner';
 import { NutritionService } from '../services/nutritionService';
+import { BarcodeService } from '../services/barcodeService';
 import { Meal, Food } from '../types';
 import { Logger } from '../utils/logger';
 import Colors from '../styles/colors';
@@ -29,11 +31,83 @@ const MealAddScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
+  const [servingSize, setServingSize] = useState('100');
+  const [servingUnit, setServingUnit] = useState<string>('gram');
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('lunch');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
   const [showFoodSearch, setShowFoodSearch] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
+  
+  /**
+   * Calculates nutrition values based on serving size
+   * Uses base nutrition values (per 100g/100ml) if available
+   */
+  const calculateNutrition = (food: Food, newServingSize: number): {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  } => {
+    console.log('📊 Calculating nutrition:', {
+      food: food.name,
+      newServingSize,
+      hasBaseValues: !!food.baseCalories,
+    });
+
+    // If we have base values (per 100g/100ml), use them
+    if (food.baseCalories !== undefined) {
+      const multiplier = newServingSize / 100;
+      const calculated = {
+        calories: Math.round(food.baseCalories * multiplier),
+        protein: Math.round((food.baseProtein || 0) * multiplier),
+        carbs: Math.round((food.baseCarbs || 0) * multiplier),
+        fat: Math.round((food.baseFat || 0) * multiplier),
+      };
+      
+      console.log('✅ Using base values (per 100g/ml):', {
+        base: {
+          calories: food.baseCalories,
+          protein: food.baseProtein,
+          carbs: food.baseCarbs,
+          fat: food.baseFat,
+        },
+        multiplier,
+        calculated,
+      });
+      
+      return calculated;
+    }
+
+    // Fallback: Calculate from original serving size
+    const originalServingSize = food.servingSize;
+    const ratio = newServingSize / originalServingSize;
+    const calculated = {
+      calories: Math.round(food.calories * ratio),
+      protein: Math.round(food.protein * ratio),
+      carbs: Math.round(food.carbs * ratio),
+      fat: Math.round(food.fat * ratio),
+    };
+
+    console.log('⚠️ Using ratio calculation:', {
+      originalServingSize,
+      ratio,
+      calculated,
+    });
+
+    return calculated;
+  };
+
+  // Available serving units
+  const servingUnits = [
+    { id: 'gram', label: 'Gram (g)', emoji: '⚖️', type: 'weight' },
+    { id: 'ml', label: 'Mililitre (ml)', emoji: '💧', type: 'liquid' },
+    { id: 'adet', label: 'Adet', emoji: '🔢', type: 'count' },
+    { id: 'porsiyon', label: 'Porsiyon', emoji: '🍽️', type: 'count' },
+    { id: 'bardak', label: 'Bardak', emoji: '🥤', type: 'volume' },
+    { id: 'kaşık', label: 'Kaşık', emoji: '🥄', type: 'volume' },
+  ];
 
   // Meal type options
   const mealTypes = [
@@ -137,6 +211,84 @@ const MealAddScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   };
 
   /**
+   * Handles barcode scan
+   * @param barcode Scanned barcode
+   */
+  const handleBarcodeScanned = async (barcode: string) => {
+    try {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📲 MEAL ADD SCREEN - BARCODE HANDLER');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      Logger.log('MealAddScreen', 'Step 1: Barcode received', { barcode });
+      console.log('📊 Barcode:', barcode);
+      
+      // Close scanner first
+      setShowBarcodeScanner(false);
+      console.log('✓ Scanner closed');
+
+      // Validate barcode
+      console.log('⏳ Validating barcode...');
+      if (!BarcodeService.isValidBarcode(barcode)) {
+        console.log('❌ Barcode validation failed');
+        setTimeout(() => {
+          Alert.alert('Geçersiz Barkod', 'Lütfen geçerli bir ürün barkodu okutun');
+        }, 300);
+        return;
+      }
+      console.log('✅ Barcode is valid');
+
+      // Search product (no loading alert, will show result directly)
+      Logger.log('MealAddScreen', 'Step 2: Searching product in OpenFoodFacts');
+      console.log('⏳ Calling BarcodeService.searchProductByBarcode...');
+      
+      const product = await BarcodeService.searchProductByBarcode(barcode);
+      console.log('📦 Product search result:', product);
+
+      // Wait a bit before showing alert to avoid conflicts
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      if (product) {
+        // Product found - use it like selecting from database
+        Logger.log('MealAddScreen', 'Step 3: Product found, filling form', { product });
+        console.log('✅ Product found! Filling form...');
+        
+        handleFoodSelect(product, 1);
+        
+        Alert.alert(
+          '✅ Ürün Bulundu!',
+          `${product.name}\n${product.calories} kcal\n\nForm otomatik dolduruldu.`
+        );
+        console.log('✅ Form filled successfully');
+      } else {
+        // Product not found
+        Logger.log('MealAddScreen', 'Step 3: Product not found');
+        console.log('❌ Product not found in OpenFoodFacts');
+        
+        Alert.alert(
+          'Ürün Bulunamadı 😞',
+          `Barkod: ${barcode}\n\nBu ürün OpenFoodFacts veritabanında bulunamadı.\n\nNot: Türk ürünleri henüz tam kayıtlı değil. Besin veritabanımızdan seçebilir veya manuel ekleyebilirsiniz.`,
+          [
+            { 
+              text: 'Tamam', 
+              style: 'cancel',
+              onPress: () => {
+                console.log('👍 User dismissed alert');
+              }
+            },
+          ]
+        );
+      }
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } catch (error) {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('❌ MEAL ADD SCREEN ERROR:', error);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      Logger.error('MealAddScreen', 'Error handling barcode', error);
+      Alert.alert('Hata', 'Ürün bilgileri yüklenirken bir hata oluştu');
+    }
+  };
+
+  /**
    * Handles form reset
    */
   const handleReset = () => {
@@ -146,6 +298,8 @@ const MealAddScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     setProtein('');
     setCarbs('');
     setFat('');
+    setServingSize('100');
+    setServingUnit('gram');
     setSelectedMealType('lunch');
     setSelectedFood(null);
   };
@@ -156,38 +310,64 @@ const MealAddScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
    * @param servingMultiplier Portion multiplier (e.g., 1.5 for 1.5 portions)
    */
   const handleFoodSelect = (food: Food, servingMultiplier: number) => {
-    Logger.log('MealAddScreen', 'Food selected from database', {
-      food: food.name,
-      multiplier: servingMultiplier,
-    });
+    try {
+      Logger.log('MealAddScreen', 'Food selected from database', {
+        food: food.name,
+        multiplier: servingMultiplier,
+      });
 
-    // 1. Calculate nutrition values based on serving multiplier
-    const calculatedCalories = Math.round(food.calories * servingMultiplier);
-    const calculatedProtein = Math.round(food.protein * servingMultiplier);
-    const calculatedCarbs = Math.round(food.carbs * servingMultiplier);
-    const calculatedFat = Math.round(food.fat * servingMultiplier);
+      // 1. Calculate nutrition values based on serving multiplier
+      const calculatedCalories = Math.round(food.calories * servingMultiplier);
+      const calculatedProtein = Math.round(food.protein * servingMultiplier);
+      const calculatedCarbs = Math.round(food.carbs * servingMultiplier);
+      const calculatedFat = Math.round(food.fat * servingMultiplier);
 
-    // 2. Fill form with calculated values
-    setMealName(
-      servingMultiplier === 1
+      Logger.log('MealAddScreen', 'Calculated nutrition values', {
+        calories: calculatedCalories,
+        protein: calculatedProtein,
+        carbs: calculatedCarbs,
+        fat: calculatedFat,
+      });
+
+      // 2. Fill form with calculated values
+      const mealNameValue = servingMultiplier === 1
         ? food.name
-        : `${food.name} (${servingMultiplier}x)`
-    );
-    setCalories(calculatedCalories.toString());
-    setProtein(calculatedProtein.toString());
-    setCarbs(calculatedCarbs.toString());
-    setFat(calculatedFat.toString());
-    setSelectedFood(food);
+        : `${food.name} (${servingMultiplier}x)`;
+      
+      Logger.log('MealAddScreen', 'Setting form values', {
+        mealName: mealNameValue,
+        calories: calculatedCalories.toString(),
+      });
 
-    // 3. Close modal
-    setShowFoodSearch(false);
+      setMealName(mealNameValue);
+      setCalories(calculatedCalories.toString());
+      setProtein(calculatedProtein.toString());
+      setCarbs(calculatedCarbs.toString());
+      setFat(calculatedFat.toString());
+      setSelectedFood(food);
 
-    Logger.log('MealAddScreen', 'Form filled with food data', {
-      calories: calculatedCalories,
-      protein: calculatedProtein,
-      carbs: calculatedCarbs,
-      fat: calculatedFat,
-    });
+      // Set serving size and unit from selected food
+      const finalServingSize = food.servingSize * servingMultiplier;
+      setServingSize(finalServingSize.toString());
+      setServingUnit(food.servingUnit);
+
+      Logger.log('MealAddScreen', 'Serving info set', {
+        servingSize: finalServingSize,
+        servingUnit: food.servingUnit,
+      });
+
+      // 3. Close modal
+      setShowFoodSearch(false);
+
+      Logger.log('MealAddScreen', 'Form filled successfully with food data');
+    } catch (error) {
+      Logger.error('MealAddScreen', 'Error handling food selection', error);
+      Alert.alert(
+        'Hata',
+        'Besin bilgileri yüklenirken bir hata oluştu. Lütfen tekrar deneyin.'
+      );
+      setShowFoodSearch(false);
+    }
   };
 
   return (
@@ -212,23 +392,38 @@ const MealAddScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             </Text>
           </View>
 
-          {/* Food Database Search Button */}
-          <TouchableOpacity
-            style={styles.searchButton}
-            onPress={() => setShowFoodSearch(true)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.searchButtonContent}>
-              <Text style={styles.searchButtonEmoji}>🔍</Text>
-              <View style={styles.searchButtonText}>
-                <Text style={styles.searchButtonTitle}>Besin Veritabanından Seç</Text>
-                <Text style={styles.searchButtonSubtitle}>
-                  Hazır besin bilgilerini kullan
-                </Text>
-              </View>
+          {/* Quick Add Section */}
+          <View style={styles.quickAddSection}>
+            <Text style={styles.quickAddTitle}>Hızlı Ekleme</Text>
+            
+            <View style={styles.quickAddRow}>
+              {/* Barcode Scanner Button */}
+              <TouchableOpacity
+                style={styles.quickAddButton}
+                onPress={() => setShowBarcodeScanner(true)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.quickAddContent}>
+                  <Text style={styles.quickAddEmoji}>📷</Text>
+                  <Text style={styles.quickAddLabel}>Barkod Okut</Text>
+                  <Text style={styles.quickAddSubtitle}>Kamera ile</Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Food Database Search Button */}
+              <TouchableOpacity
+                style={styles.quickAddButton}
+                onPress={() => setShowFoodSearch(true)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.quickAddContent}>
+                  <Text style={styles.quickAddEmoji}>🔍</Text>
+                  <Text style={styles.quickAddLabel}>Veritabanı</Text>
+                  <Text style={styles.quickAddSubtitle}>60+ besin</Text>
+                </View>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.searchButtonArrow}>›</Text>
-          </TouchableOpacity>
+          </View>
 
           {/* Selected Food Info */}
           {selectedFood && (
@@ -300,6 +495,128 @@ const MealAddScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
               onChangeText={setMealName}
               maxLength={50}
             />
+          </View>
+
+          {/* Serving Size & Unit */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>📏 Porsiyon Bilgisi</Text>
+            <Text style={styles.sectionSubtitle}>
+              Tükettiğiniz miktarı belirtin
+            </Text>
+
+            {/* Serving Size Input */}
+            <View style={styles.servingSizeRow}>
+              <View style={styles.servingSizeInput}>
+                <Text style={styles.label}>Miktar</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="100"
+                  placeholderTextColor="#9CA3AF"
+                  value={servingSize}
+                  onChangeText={(value) => {
+                    setServingSize(value);
+                    
+                    // If we have a selected food, recalculate nutrition
+                    if (selectedFood && value) {
+                      const newSize = parseFloat(value);
+                      if (!isNaN(newSize) && newSize > 0) {
+                        const nutrition = calculateNutrition(selectedFood, newSize);
+                        setCalories(nutrition.calories.toString());
+                        setProtein(nutrition.protein.toString());
+                        setCarbs(nutrition.carbs.toString());
+                        setFat(nutrition.fat.toString());
+                        
+                        Logger.log('MealAddScreen', 'Nutrition recalculated', {
+                          newServingSize: newSize,
+                          nutrition,
+                        });
+                      }
+                    }
+                  }}
+                  keyboardType="numeric"
+                  maxLength={6}
+                />
+              </View>
+
+              <View style={styles.servingUnitSelect}>
+                <Text style={styles.label}>Birim</Text>
+                <View style={styles.unitGrid}>
+                  {servingUnits.map((unit) => (
+                    <TouchableOpacity
+                      key={unit.id}
+                      style={[
+                        styles.unitButton,
+                        servingUnit === unit.id && styles.unitButtonActive,
+                      ]}
+                      onPress={() => {
+                        // Check if unit is appropriate for the food type
+                        if (selectedFood && selectedFood.isLiquid !== undefined) {
+                          const isLiquidUnit = unit.type === 'liquid';
+                          const foodIsLiquid = selectedFood.isLiquid;
+
+                          if (foodIsLiquid && unit.id === 'gram') {
+                            Alert.alert(
+                              '⚠️ Uyarı',
+                              `${selectedFood.name} sıvı bir üründür. Gram yerine ml kullanmanız önerilir.`,
+                              [
+                                { text: 'İptal', style: 'cancel' },
+                                { 
+                                  text: 'Yine de Kullan', 
+                                  onPress: () => setServingUnit(unit.id)
+                                },
+                              ]
+                            );
+                            return;
+                          }
+
+                          if (!foodIsLiquid && unit.id === 'ml') {
+                            Alert.alert(
+                              '⚠️ Uyarı',
+                              `${selectedFood.name} katı bir üründür. ml yerine gram kullanmanız önerilir.`,
+                              [
+                                { text: 'İptal', style: 'cancel' },
+                                { 
+                                  text: 'Yine de Kullan', 
+                                  onPress: () => setServingUnit(unit.id)
+                                },
+                              ]
+                            );
+                            return;
+                          }
+                        }
+
+                        setServingUnit(unit.id);
+                        Logger.log('MealAddScreen', 'Unit changed', { unit: unit.id });
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.unitEmoji}>{unit.emoji}</Text>
+                      <Text
+                        style={[
+                          styles.unitLabel,
+                          servingUnit === unit.id && styles.unitLabelActive,
+                        ]}
+                      >
+                        {unit.id}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            {/* Current Serving Display */}
+            <View style={styles.currentServingDisplay}>
+              <Text style={styles.currentServingText}>
+                {servingSize} {servingUnit}
+              </Text>
+              <Text style={styles.currentServingHintText}>
+                {(() => {
+                  const unit = servingUnits.find(u => u.id === servingUnit);
+                  return unit ? `${unit.emoji} ${unit.label}` : servingUnit;
+                })()}
+              </Text>
+            </View>
           </View>
 
           {/* Calories */}
@@ -410,6 +727,13 @@ const MealAddScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         visible={showFoodSearch}
         onClose={() => setShowFoodSearch(false)}
         onSelectFood={handleFoodSelect}
+      />
+
+      {/* Barcode Scanner Modal */}
+      <BarcodeScannerComponent
+        visible={showBarcodeScanner}
+        onClose={() => setShowBarcodeScanner(false)}
+        onBarcodeScanned={handleBarcodeScanned}
       />
     </SafeAreaView>
   );
@@ -570,49 +894,51 @@ const styles = StyleSheet.create({
   halfButton: {
     flex: 1,
   },
-  searchButton: {
+  quickAddSection: {
+    marginBottom: 24,
+  },
+  quickAddTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.text.primary,
+    marginBottom: 12,
+    letterSpacing: -0.3,
+  },
+  quickAddRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  quickAddButton: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-    flexDirection: 'row',
+    padding: 20,
     alignItems: 'center',
-    justifyContent: 'space-between',
     borderWidth: 2,
     borderColor: Colors.primary.main,
     shadowColor: Colors.primary.main,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
-  searchButtonContent: {
-    flexDirection: 'row',
+  quickAddContent: {
     alignItems: 'center',
-    flex: 1,
   },
-  searchButtonEmoji: {
-    fontSize: 32,
-    marginRight: 12,
+  quickAddEmoji: {
+    fontSize: 40,
+    marginBottom: 12,
   },
-  searchButtonText: {
-    flex: 1,
-  },
-  searchButtonTitle: {
-    fontSize: 16,
+  quickAddLabel: {
+    fontSize: 15,
     fontWeight: '800',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 4,
   },
-  searchButtonSubtitle: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  searchButtonArrow: {
-    fontSize: 32,
-    color: Colors.primary.main,
-    fontWeight: '300',
+  quickAddSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.text.secondary,
   },
   selectedFoodCard: {
     backgroundColor: '#F0FDF4',
@@ -670,6 +996,67 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#9CA3AF',
     fontWeight: '600',
+  },
+  servingSizeRow: {
+    flexDirection: 'column',
+    gap: 16,
+    marginBottom: 16,
+  },
+  servingSizeInput: {
+    flex: 1,
+  },
+  servingUnitSelect: {
+    flex: 1,
+  },
+  unitGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  unitButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  unitButtonActive: {
+    borderColor: Colors.primary.main,
+    backgroundColor: '#F0FDF4',
+  },
+  unitEmoji: {
+    fontSize: 16,
+  },
+  unitLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  unitLabelActive: {
+    color: Colors.primary.main,
+  },
+  currentServingDisplay: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#DBEAFE',
+  },
+  currentServingText: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1E40AF',
+    marginBottom: 4,
+  },
+  currentServingHintText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#60A5FA',
   },
 });
 

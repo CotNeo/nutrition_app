@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Linking,
 } from 'react-native';
 import Button from '../components/Button';
 import SocialButton from '../components/SocialButton';
@@ -151,7 +152,7 @@ const AuthScreen: React.FC = () => {
             <SocialButton
               provider="google"
               onPress={handleGoogleSignIn}
-              loading={loading && mode === 'google'}
+              loading={loading}
               disabled={loading}
             />
 
@@ -159,7 +160,7 @@ const AuthScreen: React.FC = () => {
               <SocialButton
                 provider="apple"
                 onPress={handleAppleSignIn}
-                loading={loading && mode === 'apple'}
+                loading={loading}
                 disabled={loading}
               />
             )}
@@ -264,6 +265,28 @@ const AuthScreen: React.FC = () => {
               <Text style={styles.toggleLink}>
                 {mode === 'login' ? 'Kayıt Ol' : 'Giriş Yap'}
               </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Footer Branding */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Made with ❤️ by</Text>
+            <TouchableOpacity
+              onPress={() => {
+                Logger.log('AuthScreen', 'Opening CotNeo website');
+                Linking.openURL('https://www.cotneo.com');
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.footerBrand}>CotNeo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                Linking.openURL('https://www.cotneo.com');
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.footerLink}>www.cotneo.com</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -385,6 +408,32 @@ const styles = StyleSheet.create({
     color: Colors.primary.main,
     fontSize: 15,
     fontWeight: '800',
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: 40,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: Colors.neutral[200],
+  },
+  footerText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: Colors.text.tertiary,
+    marginBottom: 8,
+  },
+  footerBrand: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: Colors.primary.main,
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  footerLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.secondary.main,
+    textDecorationLine: 'underline',
   },
 });
 

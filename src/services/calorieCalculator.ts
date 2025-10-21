@@ -245,5 +245,110 @@ export class CalorieCalculator {
 
     return Math.ceil(weightDiff / weeklyChange);
   }
+
+  /**
+   * Creates weight loss/gain plans for different timeframes
+   * @param currentWeight Current weight in kg
+   * @param targetWeight Target weight in kg
+   * @param tdee Total Daily Energy Expenditure
+   * @param gender User's gender
+   * @returns Array of plans with different timeframes
+   */
+  static createWeightPlans(
+    currentWeight: number,
+    targetWeight: number,
+    tdee: number,
+    gender: 'male' | 'female' | 'other'
+  ) {
+    const weightDiff = targetWeight - currentWeight;
+    const isLosingWeight = weightDiff < 0;
+    const absoluteDiff = Math.abs(weightDiff);
+
+    // Timeframes in months
+    const timeframes = [3, 6, 9, 12];
+
+    const plans = timeframes.map((months) => {
+      // Convert months to weeks
+      const weeks = months * 4;
+      
+      // Weekly weight change needed
+      const weeklyChange = absoluteDiff / weeks;
+      
+      // 1 kg fat = ~7700 calories
+      // Calculate daily calorie deficit/surplus needed
+      const dailyCalorieChange = (weeklyChange * 7700) / 7;
+      
+      // Target daily calories
+      const targetCalories = Math.round(tdee + (isLosingWeight ? -dailyCalorieChange : dailyCalorieChange));
+      
+      // Calculate macros for this calorie target
+      const goal = isLosingWeight ? 'lose_weight' : 'gain_weight';
+      const macros = this.calculateMacros(targetCalories, currentWeight, goal);
+      
+      // Determine if the plan is healthy (0.25kg - 1kg per week is safe)
+      const isHealthy = weeklyChange >= 0.25 && weeklyChange <= 1.0;
+      const isTooFast = weeklyChange > 1.0;
+      const isTooSlow = weeklyChange < 0.25;
+      
+      // Recommendation
+      let recommendation = '';
+      if (isHealthy) {
+        recommendation = '✅ Sağlıklı ve sürdürülebilir';
+      } else if (isTooFast) {
+        recommendation = '⚠️ Çok hızlı, sağlıksız olabilir';
+      } else {
+        recommendation = '🐢 Çok yavaş ilerliyor';
+      }
+      
+      return {
+        months,
+        weeks,
+        weeklyChange: Math.round(weeklyChange * 100) / 100,
+        dailyCalories: targetCalories,
+        calorieChange: Math.round(dailyCalorieChange),
+        protein: macros.protein,
+        carbs: macros.carbs,
+        fat: macros.fat,
+        isHealthy,
+        isTooFast,
+        isTooSlow,
+        recommendation,
+        endDate: new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000),
+      };
+    });
+
+    // Find recommended plan (prioritize healthy plans)
+    const recommendedPlan = plans.find((p) => p.isHealthy) || plans[2]; // Default to 9 months
+
+    return {
+      plans,
+      recommendedPlan,
+      currentWeight,
+      targetWeight,
+      weightDiff,
+      isLosingWeight,
+    };
+  }
+
+  /**
+   * Get a simple weight plan description
+   * @param currentWeight Current weight in kg
+   * @param targetWeight Target weight in kg
+   * @returns Simple plan description
+   */
+  static getSimplePlan(currentWeight: number, targetWeight: number): string {
+    const diff = Math.abs(targetWeight - currentWeight);
+    const isLosing = targetWeight < currentWeight;
+    
+    if (diff === 0) {
+      return 'Hedef kilonuz mevcut kilonuzla aynı';
+    }
+    
+    // Healthy rate: 0.5kg per week
+    const weeks = Math.ceil(diff / 0.5);
+    const months = Math.ceil(weeks / 4);
+    
+    return `${isLosing ? 'Vermek' : 'Almak'} istediğiniz ${diff}kg için tahmini süre: ${months} ay`;
+  }
 }
 

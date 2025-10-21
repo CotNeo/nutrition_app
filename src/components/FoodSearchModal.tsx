@@ -40,6 +40,7 @@ const FoodSearchModal: React.FC<FoodSearchModalProps> = ({
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [recentFoods, setRecentFoods] = useState<Food[]>([]);
   const [favoriteFoods, setFavoriteFoods] = useState<Food[]>([]);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // Category options
   const categories = [
@@ -139,18 +140,35 @@ const FoodSearchModal: React.FC<FoodSearchModalProps> = ({
    * Confirm food selection with serving size
    */
   const handleConfirmSelection = async () => {
-    if (!selectedFood) return;
+    if (!selectedFood || isConfirming) return;
 
-    Logger.log('FoodSearchModal', 'Confirming food selection', {
-      food: selectedFood.name,
-      multiplier: servingMultiplier,
-    });
+    setIsConfirming(true);
+    
+    try {
+      Logger.log('FoodSearchModal', 'Confirming food selection', {
+        food: selectedFood.name,
+        multiplier: servingMultiplier,
+      });
 
-    // Add to recent foods
-    await FoodHistoryService.addToRecentFoods(selectedFood);
+      // Add to recent foods
+      await FoodHistoryService.addToRecentFoods(selectedFood);
 
-    onSelectFood(selectedFood, servingMultiplier);
-    handleClose();
+      // Call parent callback
+      onSelectFood(selectedFood, servingMultiplier);
+      
+      // Close modal
+      handleClose();
+      
+      Logger.log('FoodSearchModal', 'Food selection confirmed successfully');
+    } catch (error) {
+      Logger.error('FoodSearchModal', 'Error confirming selection', error);
+      
+      // Even if recent foods fails, still add the food
+      onSelectFood(selectedFood, servingMultiplier);
+      handleClose();
+    } finally {
+      setIsConfirming(false);
+    }
   };
 
   /**
@@ -161,6 +179,7 @@ const FoodSearchModal: React.FC<FoodSearchModalProps> = ({
     setSelectedCategory('all');
     setSelectedFood(null);
     setServingMultiplier(1);
+    setIsConfirming(false);
     onClose();
   };
 
@@ -288,17 +307,21 @@ const FoodSearchModal: React.FC<FoodSearchModalProps> = ({
         onRequestClose={handleClose}
       >
         <SafeAreaView style={styles.container}>
-          <View style={styles.servingSelectorContainer}>
-            {/* Header */}
-            <View style={styles.servingHeader}>
-              <TouchableOpacity onPress={() => setSelectedFood(null)} style={styles.backButton}>
-                <Text style={styles.backButtonText}>‹ Geri</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
+          {/* Header */}
+          <View style={styles.servingHeader}>
+            <TouchableOpacity onPress={() => setSelectedFood(null)} style={styles.backButton}>
+              <Text style={styles.backButtonText}>‹ Geri</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
 
+          <ScrollView
+            style={styles.servingScrollView}
+            contentContainerStyle={styles.servingScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Food Info */}
             <View style={styles.selectedFoodHeader}>
               <Text style={styles.selectedFoodEmoji}>{selectedFood.emoji || '🍴'}</Text>
@@ -312,24 +335,70 @@ const FoodSearchModal: React.FC<FoodSearchModalProps> = ({
             <View style={styles.servingAmountSection}>
               <Text style={styles.servingAmountTitle}>Porsiyon Miktarı</Text>
               
+              {/* Manual Input with +/- Buttons */}
+              <View style={styles.manualInputContainer}>
+                <TouchableOpacity
+                  style={styles.adjustButton}
+                  onPress={() => {
+                    const newValue = Math.max(0.1, Math.round((servingMultiplier - 0.1) * 10) / 10);
+                    setServingMultiplier(newValue);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.adjustButtonText}>−</Text>
+                </TouchableOpacity>
+                
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.servingInput}
+                    value={servingMultiplier % 1 === 0 ? servingMultiplier.toFixed(0) : servingMultiplier.toFixed(1)}
+                    onChangeText={(text) => {
+                      // Türkçe virgül desteği
+                      const cleanText = text.replace(',', '.');
+                      const value = parseFloat(cleanText);
+                      if (!isNaN(value) && value >= 0.1 && value <= 10) {
+                        setServingMultiplier(Math.round(value * 10) / 10);
+                      } else if (cleanText === '' || cleanText === '0') {
+                        setServingMultiplier(0.1);
+                      }
+                    }}
+                    keyboardType="decimal-pad"
+                    selectTextOnFocus
+                  />
+                  <Text style={styles.multiplierLabel}>x porsiyon</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.adjustButton}
+                  onPress={() => {
+                    const newValue = Math.min(10, Math.round((servingMultiplier + 0.1) * 10) / 10);
+                    setServingMultiplier(newValue);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.adjustButtonText}>+</Text>
+                </TouchableOpacity>
+              </View>
+
               {/* Quick Select Buttons */}
+              <Text style={styles.quickSelectTitle}>Hızlı Seçim</Text>
               <View style={styles.quickSelectRow}>
-                {[0.5, 1, 1.5, 2, 2.5, 3].map((multiplier) => (
+                {[0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 4, 5].map((multiplier) => (
                   <TouchableOpacity
                     key={multiplier}
                     style={[
                       styles.quickSelectButton,
-                      servingMultiplier === multiplier && styles.quickSelectButtonActive,
+                      Math.abs(servingMultiplier - multiplier) < 0.01 && styles.quickSelectButtonActive,
                     ]}
                     onPress={() => setServingMultiplier(multiplier)}
                   >
                     <Text
                       style={[
                         styles.quickSelectText,
-                        servingMultiplier === multiplier && styles.quickSelectTextActive,
+                        Math.abs(servingMultiplier - multiplier) < 0.01 && styles.quickSelectTextActive,
                       ]}
                     >
-                      {multiplier}x
+                      {multiplier % 1 === 0 ? multiplier.toFixed(0) : multiplier}x
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -339,7 +408,25 @@ const FoodSearchModal: React.FC<FoodSearchModalProps> = ({
               <View style={styles.currentServingCard}>
                 <Text style={styles.currentServingLabel}>Seçilen Miktar</Text>
                 <Text style={styles.currentServingValue}>
-                  {selectedFood.servingSize * servingMultiplier} {selectedFood.servingUnit}
+                  {(() => {
+                    const value = selectedFood.servingSize * servingMultiplier;
+                    const displayValue = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
+                    return `${displayValue} ${selectedFood.servingUnit}`;
+                  })()}
+                </Text>
+                <Text style={styles.currentServingHint}>
+                  {(() => {
+                    const unit = selectedFood.servingUnit.toLowerCase();
+                    if (unit.includes('ml') || unit.includes('litre') || unit === 'cl') {
+                      return '💧 Sıvı ölçüsü';
+                    } else if (unit === 'gram' || unit === 'kg') {
+                      return '⚖️ Ağırlık ölçüsü';
+                    } else if (unit === 'adet' || unit === 'porsiyon') {
+                      return '🔢 Adet/Porsiyon';
+                    } else {
+                      return '📏 ' + selectedFood.servingUnit;
+                    }
+                  })()}
                 </Text>
               </View>
             </View>
@@ -386,14 +473,20 @@ const FoodSearchModal: React.FC<FoodSearchModalProps> = ({
             {/* Confirm Button */}
             <View style={styles.confirmButtonContainer}>
               <TouchableOpacity
-                style={styles.confirmButton}
+                style={[
+                  styles.confirmButton,
+                  isConfirming && styles.confirmButtonDisabled,
+                ]}
                 onPress={handleConfirmSelection}
                 activeOpacity={0.8}
+                disabled={isConfirming}
               >
-                <Text style={styles.confirmButtonText}>✓ Onayla ve Ekle</Text>
+                <Text style={styles.confirmButtonText}>
+                  {isConfirming ? '⏳ Ekleniyor...' : '✓ Onayla ve Ekle'}
+                </Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </SafeAreaView>
       </Modal>
     );
@@ -750,15 +843,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   // Serving Selector Styles
-  servingSelectorContainer: {
+  servingScrollView: {
     flex: 1,
+  },
+  servingScrollContent: {
     padding: 20,
+    paddingBottom: 40,
   },
   servingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   backButton: {
     paddingVertical: 8,
@@ -806,6 +907,67 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: 16,
   },
+  manualInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: Colors.primary.main,
+    shadowColor: Colors.primary.main,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  adjustButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.primary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: Colors.primary.main,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  adjustButtonText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    lineHeight: 24,
+  },
+  inputWrapper: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  servingInput: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: Colors.primary.main,
+    textAlign: 'center',
+    paddingVertical: 4,
+    minWidth: 80,
+  },
+  multiplierLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  quickSelectTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6B7280',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   quickSelectRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -813,11 +975,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   quickSelectButton: {
-    flex: 1,
-    minWidth: '28%',
+    minWidth: '18%',
     backgroundColor: '#F3F4F6',
     borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
@@ -852,6 +1014,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     color: '#1E40AF',
+    marginBottom: 6,
+  },
+  currentServingHint: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#60A5FA',
   },
   nutritionPreviewSection: {
     marginBottom: 24,
@@ -896,8 +1064,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   confirmButtonContainer: {
-    marginTop: 'auto',
-    paddingTop: 16,
+    marginTop: 24,
+    paddingTop: 8,
   },
   confirmButton: {
     backgroundColor: Colors.primary.main,
@@ -909,6 +1077,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+  },
+  confirmButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
   },
   confirmButtonText: {
     fontSize: 18,

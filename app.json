@@ -2,7 +2,7 @@
   "expo": {
     "name": "Nutrition App",
     "slug": "nutrition-app",
-    "version": "1.0.0",
+    "version": "1.6.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "splash": {
@@ -11,11 +11,26 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nutritionapp"
+      "bundleIdentifier": "com.nutritionapp",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Barkod okutmak için kamera erişimine ihtiyacımız var.",
+        "NSMicrophoneUsageDescription": "Bu uygulama mikrofon kullanmaz."
+      }
     },
     "android": {
-      "package": "com.nutritionapp"
-    }
+      "package": "com.nutritionapp",
+      "permissions": [
+        "CAMERA"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Barkod okutmak için kamera erişimine ihtiyacımız var."
+        }
+      ]
+    ]
   }
 }
 

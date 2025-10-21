@@ -91,5 +91,6 @@ export const STORAGE_KEYS = {
   AUTH_TOKEN: 'auth_token',
   RECENT_FOODS: 'recent_foods',
   FAVORITE_FOODS: 'favorite_foods',
+  WEIGHT_HISTORY: 'weight_history',
 } as const;
 

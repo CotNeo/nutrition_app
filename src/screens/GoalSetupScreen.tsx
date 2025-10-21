@@ -12,6 +12,7 @@ import {
 import Button from '../components/Button';
 import { useAuth } from '../contexts/AuthContext';
 import { CalorieCalculator } from '../services/calorieCalculator';
+import { WeightTrackingService } from '../services/weightTrackingService';
 import { Logger } from '../utils/logger';
 import Colors from '../styles/colors';
 
@@ -24,8 +25,12 @@ type Goal = 'lose_weight' | 'maintain' | 'gain_weight' | 'gain_muscle';
  * Collects user data and calculates personalized nutrition goals
  */
 const GoalSetupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, signOut } = useAuth();
 
+  // Check if this is first time setup
+  const isFirstTimeSetup = !user?.age || !user?.weight || !user?.height || !user?.gender || !user?.goal;
+
+  const [name, setName] = useState(user?.name || '');
   const [age, setAge] = useState(user?.age?.toString() || '');
   const [weight, setWeight] = useState(user?.weight?.toString() || '');
   const [height, setHeight] = useState(user?.height?.toString() || '');
@@ -36,6 +41,48 @@ const GoalSetupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   );
   const [goal, setGoal] = useState<Goal>(user?.goal || 'maintain');
   const [loading, setLoading] = useState(false);
+  const [showPlans, setShowPlans] = useState(false);
+  const [weightPlans, setWeightPlans] = useState<any>(null);
+  const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
+
+  /**
+   * Calculate weight plans when target weight changes
+   */
+  const calculatePlans = () => {
+    if (!weight || !height || !age || !targetWeight) return;
+    
+    const weightNum = parseFloat(weight);
+    const heightNum = parseFloat(height);
+    const ageNum = parseInt(age);
+    const targetWeightNum = parseFloat(targetWeight);
+
+    if (weightNum === targetWeightNum) {
+      setShowPlans(false);
+      setWeightPlans(null);
+      return;
+    }
+
+    // Calculate BMR and TDEE
+    const bmr = CalorieCalculator.calculateBMR(weightNum, heightNum, ageNum, gender);
+    const tdee = CalorieCalculator.calculateTDEE(bmr, activityLevel);
+
+    // Create plans
+    const plans = CalorieCalculator.createWeightPlans(
+      weightNum,
+      targetWeightNum,
+      tdee,
+      gender
+    );
+
+    setWeightPlans(plans);
+    setShowPlans(true);
+    
+    // Auto-select recommended plan
+    const recommendedIndex = plans.plans.findIndex((p: any) => p.months === plans.recommendedPlan.months);
+    setSelectedPlan(recommendedIndex);
+
+    Logger.log('GoalSetupScreen', 'Weight plans calculated', plans);
+  };
 
   /**
    * Handles goal setup submission
@@ -46,8 +93,19 @@ const GoalSetupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       setLoading(true);
 
       // Validation
+      if (!name.trim()) {
+        Alert.alert('Hata', 'Lütfen adınızı girin');
+        return;
+      }
+
       if (!age || !weight || !height) {
         Alert.alert('Hata', 'Lütfen yaş, kilo ve boy bilgilerinizi girin');
+        return;
+      }
+
+      // Check if target weight is required
+      if ((goal === 'lose_weight' || goal === 'gain_weight') && !targetWeight) {
+        Alert.alert('Hata', 'Lütfen hedef kilonuzu girin');
         return;
       }
 
@@ -73,6 +131,7 @@ const GoalSetupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
       // Update user profile
       const updated = await updateUser({
+        name: name.trim(),
         age: ageNum,
         weight: weightNum,
         height: heightNum,
@@ -81,6 +140,16 @@ const GoalSetupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         goal,
         targetWeight: targetWeightNum,
       });
+
+      // If this is first time setup, add initial weight to history
+      if (updated && isFirstTimeSetup) {
+        Logger.log('GoalSetupScreen', 'Adding initial weight to history');
+        await WeightTrackingService.addWeightEntry(
+          weightNum,
+          new Date(),
+          'İlk kilo kaydı'
+        );
+      }
 
       if (updated) {
         // Calculate goals
@@ -96,13 +165,44 @@ const GoalSetupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
         if (goals) {
           Logger.log('GoalSetupScreen', 'Goals calculated', goals);
+          
+          // If user selected a weight plan, use its calories
+          let finalGoals = goals;
+          let planMessage = '';
+          
+          if (weightPlans && selectedPlan !== null) {
+            const plan = weightPlans.plans[selectedPlan];
+            finalGoals = {
+              ...goals,
+              targetCalories: plan.dailyCalories,
+              protein: plan.protein,
+              carbs: plan.carbs,
+              fat: plan.fat,
+            };
+            planMessage = `\n📅 Seçilen Plan: ${plan.months} ay\n📊 Haftalık değişim: ${weightPlans.isLosingWeight ? '-' : '+'}${plan.weeklyChange}kg\n\n`;
+          }
+          
+          const successMessage = isFirstTimeSetup 
+            ? 'Hoş geldiniz! 🎉\n\nHedefleriniz başarıyla kaydedildi.\n\n'
+            : 'Başarılı! 🎉\n\nHedefleriniz güncellendi.\n\n';
+          
           Alert.alert(
-            'Başarılı! 🎉',
-            `Günlük kalori hedefiniz: ${goals.targetCalories} kcal\n\nProtein: ${goals.protein}g\nKarbonhidrat: ${goals.carbs}g\nYağ: ${goals.fat}g`,
+            isFirstTimeSetup ? 'Kurulum Tamamlandı' : 'Güncelleme Başarılı',
+            `${successMessage}${planMessage}Günlük kalori hedefiniz: ${finalGoals.targetCalories} kcal\n\nProtein: ${finalGoals.protein}g\nKarbonhidrat: ${finalGoals.carbs}g\nYağ: ${finalGoals.fat}g`,
             [
               {
-                text: 'Tamam',
-                onPress: () => navigation.navigate('Home'),
+                text: isFirstTimeSetup ? 'Başlayalım!' : 'Tamam',
+                onPress: () => {
+                  if (isFirstTimeSetup) {
+                    // First time setup - navigate to Home and can't go back
+                    Logger.log('GoalSetupScreen', 'First time setup complete, navigating to Home');
+                    navigation.replace('Home');
+                  } else {
+                    // Updating existing goals - go back to previous screen
+                    Logger.log('GoalSetupScreen', 'Goals updated, going back');
+                    navigation.goBack();
+                  }
+                },
               },
             ]
           );
@@ -135,13 +235,33 @@ const GoalSetupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.title}>Hedeflerini Belirle</Text>
-          <Text style={styles.subtitle}>Kişiselleştirilmiş beslenme planı oluşturalım</Text>
+          <Text style={styles.title}>
+            {isFirstTimeSetup ? '🎯 Hedeflerini Belirle' : 'Hedeflerini Güncelle'}
+          </Text>
+          <Text style={styles.subtitle}>
+            {isFirstTimeSetup 
+              ? 'Kişiselleştirilmiş beslenme planı oluşturalım'
+              : 'Hedeflerini güncelleyerek planını değiştirebilirsin'}
+          </Text>
         </View>
 
         {/* Personal Info Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>👤 Kişisel Bilgiler</Text>
+
+          {/* Name Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Ad Soyad *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Örn: Ahmet Yılmaz"
+              placeholderTextColor="#9CA3AF"
+              value={name}
+              onChangeText={setName}
+              editable={!loading}
+              maxLength={50}
+            />
+          </View>
 
           <View style={styles.row}>
             <View style={styles.halfInput}>
@@ -247,18 +367,100 @@ const GoalSetupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
           {(goal === 'lose_weight' || goal === 'gain_weight') && (
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Hedef Kilo (opsiyonel)</Text>
+              <Text style={styles.label}>Hedef Kilo (kg) *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="65"
                 value={targetWeight}
-                onChangeText={setTargetWeight}
+                onChangeText={(text) => {
+                  setTargetWeight(text);
+                  setShowPlans(false); // Reset plans when target weight changes
+                }}
                 keyboardType="decimal-pad"
                 editable={!loading}
               />
+              {targetWeight && weight && (
+                <TouchableOpacity
+                  style={styles.calculateButton}
+                  onPress={calculatePlans}
+                  disabled={!age || !height || !gender}
+                >
+                  <Text style={styles.calculateButtonText}>
+                    📊 Planları Hesapla
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
+
+        {/* Weight Plans Section */}
+        {showPlans && weightPlans && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              {weightPlans.isLosingWeight ? '📉' : '📈'} Hedef Kilo Planları
+            </Text>
+            <Text style={styles.planSubtitle}>
+              {weightPlans.currentWeight}kg → {weightPlans.targetWeight}kg ({Math.abs(weightPlans.weightDiff)}kg {weightPlans.isLosingWeight ? 'azalacak' : 'artacak'})
+            </Text>
+
+            {weightPlans.plans.map((plan: any, index: number) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.planCard,
+                  selectedPlan === index && styles.planCardSelected,
+                  plan.isHealthy && styles.planCardHealthy,
+                  plan.isTooFast && styles.planCardWarning,
+                ]}
+                onPress={() => setSelectedPlan(index)}
+              >
+                <View style={styles.planHeader}>
+                  <Text style={styles.planTitle}>
+                    {plan.months} Aylık Plan
+                    {plan.isHealthy && ' ⭐'}
+                  </Text>
+                  <Text style={styles.planRecommendation}>{plan.recommendation}</Text>
+                </View>
+
+                <View style={styles.planDetails}>
+                  <View style={styles.planRow}>
+                    <Text style={styles.planLabel}>Haftalık değişim:</Text>
+                    <Text style={styles.planValue}>
+                      {weightPlans.isLosingWeight ? '-' : '+'}{plan.weeklyChange}kg
+                    </Text>
+                  </View>
+
+                  <View style={styles.planRow}>
+                    <Text style={styles.planLabel}>Günlük kalori:</Text>
+                    <Text style={styles.planValue}>{plan.dailyCalories} kcal</Text>
+                  </View>
+
+                  <View style={styles.planRow}>
+                    <Text style={styles.planLabel}>Kalori farkı:</Text>
+                    <Text style={styles.planValue}>
+                      {weightPlans.isLosingWeight ? '' : '+'}{plan.calorieChange} kcal/gün
+                    </Text>
+                  </View>
+
+                  <View style={styles.planMacros}>
+                    <Text style={styles.macroText}>P: {plan.protein}g</Text>
+                    <Text style={styles.macroText}>K: {plan.carbs}g</Text>
+                    <Text style={styles.macroText}>Y: {plan.fat}g</Text>
+                  </View>
+
+                  <Text style={styles.planEndDate}>
+                    Tahmini bitiş: {new Date(plan.endDate).toLocaleDateString('tr-TR', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         <Button
           title={loading ? 'Hesaplanıyor...' : 'Hedeflerimi Kaydet'}
@@ -267,6 +469,33 @@ const GoalSetupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
           disabled={loading}
           style={styles.submitButton}
         />
+        
+        {/* Logout button only for first time setup */}
+        {isFirstTimeSetup && (
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={async () => {
+              Alert.alert(
+                'Çıkış Yap',
+                'Hedeflerinizi kaydetmeden çıkmak istediğinize emin misiniz?',
+                [
+                  { text: 'İptal', style: 'cancel' },
+                  {
+                    text: 'Çıkış Yap',
+                    style: 'destructive',
+                    onPress: async () => {
+                      Logger.log('GoalSetupScreen', 'User logged out before completing setup');
+                      await signOut();
+                    },
+                  },
+                ]
+              );
+            }}
+            disabled={loading}
+          >
+            <Text style={styles.logoutButtonText}>🚪 Çıkış Yap</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -404,7 +633,115 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: 12,
+    marginBottom: 12,
+  },
+  logoutButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#EF4444',
+    alignItems: 'center',
     marginBottom: 32,
+  },
+  logoutButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#EF4444',
+  },
+  calculateButton: {
+    backgroundColor: Colors.secondary.main,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  calculateButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  planSubtitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+    marginBottom: 16,
+  },
+  planCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: Colors.neutral[200],
+  },
+  planCardSelected: {
+    borderColor: Colors.primary.main,
+    backgroundColor: '#F0FDF4',
+    shadowColor: Colors.primary.main,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  planCardHealthy: {
+    borderColor: Colors.primary.light,
+  },
+  planCardWarning: {
+    borderColor: '#F59E0B',
+  },
+  planHeader: {
+    marginBottom: 12,
+  },
+  planTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  planRecommendation: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+  },
+  planDetails: {
+    gap: 8,
+  },
+  planRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  planLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+  },
+  planValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text.primary,
+  },
+  planMacros: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.neutral[200],
+    marginTop: 4,
+  },
+  macroText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+  },
+  planEndDate: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.accent.purple,
+    marginTop: 8,
   },
 });
 

@@ -16,10 +16,18 @@ Nutrition App/
 │   │   └── Button.tsx        # Yeniden kullanılabilir buton
 │   │
 │   ├── screens/              # Ekran Bileşenleri
-│   │   └── HomeScreen.tsx    # Ana ekran
+│   │   ├── HomeScreen.tsx    # Ana ekran
+│   │   ├── AuthScreen.tsx    # Giriş/Kayıt
+│   │   ├── GoalSetupScreen.tsx # Hedef belirleme
+│   │   ├── MealAddScreen.tsx # Öğün ekleme
+│   │   ├── MealHistoryScreen.tsx # Öğün geçmişi
+│   │   └── StatsScreen.tsx   # İstatistikler & Grafikler 🆕
 │   │
 │   ├── services/             # İş Mantığı
-│   │   └── nutritionService.ts  # Beslenme servisi
+│   │   ├── nutritionService.ts  # Beslenme servisi
+│   │   ├── statsService.ts      # İstatistik servisi 🆕
+│   │   ├── weightTrackingService.ts # Kilo takip servisi 🆕
+│   │   └── barcodeService.ts    # Barkod okuma servisi 🆕
 │   │
 │   ├── utils/                # Yardımcı Araçlar
 │   │   ├── logger.ts         # Log yönetimi

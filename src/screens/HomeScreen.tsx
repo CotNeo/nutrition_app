@@ -346,14 +346,22 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             />
           </View>
           
-          {calorieGoals && (
+          <View style={styles.actionRow}>
             <Button
-              title="⚙️ Hedefleri Güncelle"
-              onPress={() => navigation.navigate('GoalSetup')}
+              title="📈 İstatistikler"
+              onPress={() => navigation.navigate('Stats')}
               variant="outline"
-              style={styles.actionButton}
+              style={[styles.actionButton, styles.halfButton]}
             />
-          )}
+            {calorieGoals && (
+              <Button
+                title="⚙️ Hedefler"
+                onPress={() => navigation.navigate('GoalSetup')}
+                variant="outline"
+                style={[styles.actionButton, styles.halfButton]}
+              />
+            )}
+          </View>
         </View>
         </Animated.View>
       </ScrollView>

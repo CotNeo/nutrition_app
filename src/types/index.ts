@@ -46,13 +46,19 @@ export interface Food {
   id: string;
   name: string;
   category: 'meal' | 'protein' | 'carb' | 'fruit' | 'vegetable' | 'snack' | 'beverage' | 'dairy' | 'dessert';
-  calories: number; // per 100g or per serving
-  protein: number; // in grams per 100g or per serving
-  carbs: number; // in grams per 100g or per serving
-  fat: number; // in grams per 100g or per serving
-  servingSize: number; // in grams
-  servingUnit: string; // e.g., "porsiyon", "bardak", "adet"
+  calories: number; // per serving (calculated from base)
+  protein: number; // in grams per serving (calculated from base)
+  carbs: number; // in grams per serving (calculated from base)
+  fat: number; // in grams per serving (calculated from base)
+  servingSize: number; // in grams or ml
+  servingUnit: string; // e.g., "gram", "ml", "adet", "porsiyon", "bardak", "kaşık"
   emoji?: string;
+  // Base nutrition values per 100g or 100ml (for dynamic calculation)
+  baseCalories?: number; // per 100g/100ml
+  baseProtein?: number; // per 100g/100ml
+  baseCarbs?: number; // per 100g/100ml
+  baseFat?: number; // per 100g/100ml
+  isLiquid?: boolean; // true for liquids (ml), false for solids (g)
 }
 
 export interface ApiResponse<T> {
