@@ -2,7 +2,7 @@
   "expo": {
     "name": "Nutrition App",
     "slug": "nutrition-app",
-    "version": "1.6.0",
+    "version": "1.7.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "splash": {
@@ -19,8 +19,11 @@
     },
     "android": {
       "package": "com.nutritionapp",
+      "versionCode": 7,
       "permissions": [
-        "CAMERA"
+        "CAMERA",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "plugins": [
@@ -30,7 +33,11 @@
           "cameraPermission": "Barkod okutmak için kamera erişimine ihtiyacımız var."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a36e1ec2-52c9-4a7b-a62f-c5e2b250dc78"
+      }
+    }
   }
 }
-
