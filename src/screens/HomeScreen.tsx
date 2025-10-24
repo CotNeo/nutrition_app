@@ -219,9 +219,11 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Welcome Section */}
           <View style={styles.welcomeSection}>
-            <View style={styles.headerRow}>
-              <View>
-                <Text style={styles.welcomeTitle}>Merhaba, {user?.name}! 👋</Text>
+            <View style={styles.headerContainer}>
+              <View style={styles.userInfoContainer}>
+                <Text style={styles.welcomeTitle} numberOfLines={2} ellipsizeMode="tail">
+                  Merhaba, {user?.name}! 👋
+                </Text>
                 <Text style={styles.welcomeSubtitle}>
                   {new Date().toLocaleDateString('tr-TR', {
                     weekday: 'long',
@@ -380,10 +382,18 @@ const styles = StyleSheet.create({
   welcomeSection: {
     marginBottom: 28,
   },
-  headerRow: {
+  headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    minHeight: 60, // Minimum height to ensure button visibility
+    flexWrap: 'wrap', // Allow wrapping for very long names
+  },
+  userInfoContainer: {
+    flex: 1,
+    marginRight: 12, // Add margin to prevent overlap with logout button
+    minWidth: 0, // Allow text to shrink
+    maxWidth: '75%', // Limit width to leave space for logout button
   },
   welcomeTitle: {
     fontSize: 28,
@@ -468,7 +478,7 @@ const styles = StyleSheet.create({
     minWidth: 200,
   },
   logoutButton: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1.5,
@@ -479,6 +489,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    alignSelf: 'flex-start', // Ensure button stays at the top
+    minWidth: 70, // Minimum width for button
+    alignItems: 'center', // Center text in button
   },
   logoutText: {
     color: '#EF4444',

@@ -110,12 +110,13 @@ const AuthScreen: React.FC = () => {
       
       if (success) {
         Logger.log('AuthScreen', 'Apple Sign In successful');
+        // Success message will be handled by the auth context
       } else {
-        Alert.alert('Hata', 'Apple girişi başarısız oldu.');
+        Alert.alert('Hata', 'Apple girişi başarısız oldu. Lütfen tekrar deneyin.');
       }
     } catch (error) {
       Logger.error('AuthScreen', 'Apple Sign In failed', error);
-      Alert.alert('Hata', 'Apple girişi başarısız oldu.');
+      Alert.alert('Hata', 'Apple girişi sırasında bir hata oluştu. Lütfen tekrar deneyin.');
     } finally {
       setLoading(false);
     }

@@ -32,7 +32,8 @@
         {
           "cameraPermission": "Barkod okutmak için kamera erişimine ihtiyacımız var."
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "extra": {
       "eas": {

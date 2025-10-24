@@ -21,13 +21,14 @@ Modern React Native uygulaması ile günlük beslenmenizi takip edin, hedeflerin
 ## ✨ Özellikler
 
 ### 🔐 Authentication & Onboarding
-- ✅ **Google ile giriş** (Official brand guideline)
-- ✅ **Apple ile giriş** (Official HIG)
+- ✅ **Google ile giriş** (Modern OAuth 2.0 implementation) 🆕
+- ✅ **Apple ile giriş** (Official HIG, auto name extraction) 🆕
 - ✅ **Email/Şifre ile giriş**
 - ✅ **Kayıt sistemi**
 - ✅ **Session yönetimi**
 - ✅ **Zorunlu hedef belirleme** - İlk giriş sonrası
 - ✅ **3 aşamalı kullanıcı akışı** (Login → Hedef → Ana Uygulama)
+- ✅ **Responsive header** - Long usernames handled gracefully 🆕
 
 ### 📊 Dashboard
 - ✅ **Haftalık takvim** - Swipe ve select
@@ -48,6 +49,9 @@ Modern React Native uygulaması ile günlük beslenmenizi takip edin, hedeflerin
 - ✅ **Akıllı arama** - İsme göre anlık filtreleme
 - ✅ **Kategori filtreleme** - 9 farklı kategori
 - ✅ **Hassas porsiyon kontrolü** - 0.1 - 10x arası, +/- butonlar, manuel giriş
+- ✅ **Sırayla öğün ekleme** - Multiple foods selection before adding 🆕
+- ✅ **Toplam besin değerleri** - Real-time nutrition calculation 🆕
+- ✅ **Toplu besin ekleme** - Add multiple foods at once 🆕
 - ✅ **Genişletilmiş hızlı seçim** - 10 farklı porsiyon seçeneği
 - ✅ **Akıllı birim sistemi** 🆕
   - 📏 6 farklı birim (gram, ml, adet, porsiyon, bardak, kaşık)

@@ -128,13 +128,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signInWithApple = async (): Promise<boolean> => {
     try {
       setLoading(true);
+      Logger.log('AuthContext', 'Apple Sign In initiated');
+      
       const appleUser = await AuthService.signInWithApple();
       
       if (appleUser) {
         setUser(appleUser);
+        Logger.log('AuthContext', 'Apple Sign In successful', { 
+          userId: appleUser.id,
+          userName: appleUser.name 
+        });
         return true;
       }
       
+      Logger.warn('AuthContext', 'Apple Sign In returned null user');
       return false;
     } catch (error) {
       Logger.error('AuthContext', 'Apple sign in failed', error);

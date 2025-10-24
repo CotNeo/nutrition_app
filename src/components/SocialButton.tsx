@@ -25,7 +25,7 @@ const SocialButton: React.FC<SocialButtonProps> = ({
 
   const buttonStyle = isGoogle ? styles.googleButton : styles.appleButton;
   const textStyle = isGoogle ? styles.googleText : styles.appleText;
-  const logo = isGoogle ? 'G' : ''; // Will be replaced with actual logos
+  const logo = isGoogle ? 'G' : '🍎'; // Google G logo and Apple emoji
   const title = isGoogle ? 'Google ile devam et' : 'Apple ile devam et';
 
   return (
@@ -40,7 +40,7 @@ const SocialButton: React.FC<SocialButtonProps> = ({
       ) : (
         <>
           <View style={isGoogle ? styles.googleLogo : styles.appleLogo}>
-            <Text style={styles.logoText}>{logo}</Text>
+            <Text style={isGoogle ? styles.googleLogoText : styles.logoText}>{logo}</Text>
           </View>
           <Text style={textStyle}>{title}</Text>
         </>
@@ -115,6 +115,11 @@ const styles = StyleSheet.create({
   },
   
   logoText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.brand.apple.white,
+  },
+  googleLogoText: {
     fontSize: 16,
     fontWeight: '700',
     color: Colors.brand.apple.white,

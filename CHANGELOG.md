@@ -2,6 +2,47 @@
 
 Tüm önemli değişiklikler bu dosyada belgelenir.
 
+## [1.8.0] - 2024-12-XX
+
+### 🚀 Major Features: Enhanced Meal Management & Authentication
+
+#### ✅ Sequential Food Addition System
+- **Multiple Food Selection** - Select multiple foods before adding to meal
+- **Food Queue Management** - Queue foods in "Seçilen Besinler" list
+- **Batch Addition** - Add all selected foods to meal at once
+- **Individual Food Removal** - Remove foods from selection queue
+- **Visual Food Count** - Shows number of selected foods
+
+#### ✅ Real-time Nutrition Calculation
+- **Total Nutrition Display** - Real-time calculation of total nutrition values
+- **Dynamic Updates** - Totals update when foods are added/removed
+- **Visual Nutrition Card** - Dedicated card showing total calories, protein, carbs, fat
+- **Accurate Calculations** - Precise nutrition calculations based on serving sizes
+
+#### ✅ Enhanced Authentication System
+- **Modern Google Sign-In** - OAuth 2.0 implementation with expo-auth-session
+- **Apple Sign-In Improvements** - Auto name extraction and better UX
+- **Responsive Header** - Long usernames handled gracefully with text wrapping
+- **Improved Error Handling** - Better error messages and user feedback
+
+#### ✅ Goal Setup Screen Enhancements
+- **Target Weight Visibility** - Target weight field always visible for all goal types
+- **Dynamic Placeholders** - Context-aware placeholder text
+- **Auto-fill Logic** - Automatic target weight filling for maintain goal
+- **Help Text** - User guidance for different scenarios
+
+#### 🔧 Technical Improvements
+- **State Management** - Enhanced state management for food selection
+- **TypeScript Safety** - Full type safety for all new features
+- **Performance Optimization** - Efficient calculation and rendering
+- **Code Quality** - Improved code structure and documentation
+
+#### 📱 User Experience Improvements
+- **Streamlined Workflow** - Faster meal creation process
+- **Better Visual Feedback** - Clear indication of selected foods and totals
+- **Flexible Food Management** - Easy addition and removal of foods
+- **Intuitive Interface** - User-friendly design for all features
+
 ## [1.7.1] - 2025-10-21
 
 ### 🔥 Kritik Özellik: Dinamik Kalori Hesaplama

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -44,6 +44,41 @@ const GoalSetupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [showPlans, setShowPlans] = useState(false);
   const [weightPlans, setWeightPlans] = useState<any>(null);
   const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
+
+  /**
+   * Update form fields when user data changes (e.g., after Apple Sign-In)
+   */
+  useEffect(() => {
+    if (user) {
+      Logger.log('GoalSetupScreen', 'User data updated, refreshing form fields', {
+        userName: user.name,
+        userAge: user.age,
+        userWeight: user.weight,
+        userHeight: user.height,
+        userGender: user.gender,
+        userGoal: user.goal
+      });
+      
+      // Update form fields with latest user data
+      setName(user.name || '');
+      setAge(user.age?.toString() || '');
+      setWeight(user.weight?.toString() || '');
+      setHeight(user.height?.toString() || '');
+      setTargetWeight(user.targetWeight?.toString() || '');
+      setGender(user.gender || 'male');
+      setActivityLevel(user.activityLevel || 'moderate');
+      setGoal(user.goal || 'maintain');
+    }
+  }, [user]);
+
+  /**
+   * Auto-fill target weight when goal changes to maintain
+   */
+  useEffect(() => {
+    if (goal === 'maintain' && weight && !targetWeight) {
+      setTargetWeight(weight);
+    }
+  }, [goal, weight, targetWeight]);
 
   /**
    * Calculate weight plans when target weight changes
@@ -104,7 +139,7 @@ const GoalSetupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       }
 
       // Check if target weight is required
-      if ((goal === 'lose_weight' || goal === 'gain_weight') && !targetWeight) {
+      if (!targetWeight) {
         Alert.alert('Hata', 'Lütfen hedef kilonuzu girin');
         return;
       }
@@ -254,13 +289,18 @@ const GoalSetupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             <Text style={styles.label}>Ad Soyad *</Text>
             <TextInput
               style={styles.input}
-              placeholder="Örn: Ahmet Yılmaz"
+              placeholder={name ? "Ad Soyad" : "Apple ile giriş yaptınız, lütfen ad soyadınızı girin"}
               placeholderTextColor="#9CA3AF"
               value={name}
               onChangeText={setName}
               editable={!loading}
               maxLength={50}
             />
+            {!name && (
+              <Text style={styles.helpText}>
+                💡 Apple Sign-In'den ad soyad bilgisi alınamadı. Lütfen kendi isminizi girin.
+              </Text>
+            )}
           </View>
 
           <View style={styles.row}>
@@ -365,33 +405,36 @@ const GoalSetupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             </TouchableOpacity>
           ))}
 
-          {(goal === 'lose_weight' || goal === 'gain_weight') && (
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Hedef Kilo (kg) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="65"
-                value={targetWeight}
-                onChangeText={(text) => {
-                  setTargetWeight(text);
-                  setShowPlans(false); // Reset plans when target weight changes
-                }}
-                keyboardType="decimal-pad"
-                editable={!loading}
-              />
-              {targetWeight && weight && (
-                <TouchableOpacity
-                  style={styles.calculateButton}
-                  onPress={calculatePlans}
-                  disabled={!age || !height || !gender}
-                >
-                  <Text style={styles.calculateButtonText}>
-                    📊 Planları Hesapla
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Hedef Kilo (kg) *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={goal === 'maintain' ? "Hedef kilonuz" : "65"}
+              value={targetWeight}
+              onChangeText={(text) => {
+                setTargetWeight(text);
+                setShowPlans(false); // Reset plans when target weight changes
+              }}
+              keyboardType="decimal-pad"
+              editable={!loading}
+            />
+            {goal === 'maintain' && (
+              <Text style={styles.helpText}>
+                💡 Kilo korumak için hedef kilonuz mevcut kilonuzla aynı olmalı
+              </Text>
+            )}
+            {targetWeight && weight && (goal === 'lose_weight' || goal === 'gain_weight') && (
+              <TouchableOpacity
+                style={styles.calculateButton}
+                onPress={calculatePlans}
+                disabled={!age || !height || !gender}
+              >
+                <Text style={styles.calculateButtonText}>
+                  📊 Planları Hesapla
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Weight Plans Section */}
@@ -566,6 +609,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 1,
+  },
+  helpText: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    marginTop: 8,
+    fontStyle: 'italic',
   },
   genderContainer: {
     flexDirection: 'row',

@@ -39,7 +39,27 @@ const MealAddScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [showFoodSearch, setShowFoodSearch] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
+  const [addedFoods, setAddedFoods] = useState<Array<Food & { servingSize: number; servingUnit: string; calculatedNutrition: any }>>([]);
+  const [totalNutrition, setTotalNutrition] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
+  const [selectedFoods, setSelectedFoods] = useState<Food[]>([]);
+  const [showSelectedFoods, setShowSelectedFoods] = useState(false);
   
+  /**
+   * Calculates total nutrition values for all added foods
+   */
+  const calculateTotalNutrition = (foods: Array<Food & { servingSize: number; servingUnit: string; calculatedNutrition: any }>) => {
+    const total = foods.reduce(
+      (acc, food) => ({
+        calories: acc.calories + food.calculatedNutrition.calories,
+        protein: acc.protein + food.calculatedNutrition.protein,
+        carbs: acc.carbs + food.calculatedNutrition.carbs,
+        fat: acc.fat + food.calculatedNutrition.fat,
+      }),
+      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    );
+    setTotalNutrition(total);
+  };
+
   /**
    * Calculates nutrition values based on serving size
    * Uses base nutrition values (per 100g/100ml) if available
@@ -163,23 +183,36 @@ const MealAddScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     Logger.log('MealAddScreen', 'Save meal initiated');
 
     // 1. Validate form
-    if (!validateForm()) {
+    if (addedFoods.length === 0) {
+      Alert.alert('Hata', 'Lütfen en az bir besin ekleyin');
       return;
     }
 
     setLoading(true);
 
     try {
-      // 2. Create meal object
+      // 2. Create meal object with total nutrition values
       const newMeal: Meal = {
         id: Date.now().toString(),
-        name: mealName.trim(),
-        calories: Number(calories),
-        protein: protein ? Number(protein) : 0,
-        carbs: carbs ? Number(carbs) : 0,
-        fat: fat ? Number(fat) : 0,
+        name: `${selectedMealType === 'breakfast' ? 'Kahvaltı' : 
+               selectedMealType === 'lunch' ? 'Öğle Yemeği' : 
+               selectedMealType === 'dinner' ? 'Akşam Yemeği' : 'Ara Öğün'} - ${new Date().toLocaleDateString('tr-TR')}`,
+        calories: totalNutrition.calories,
+        protein: totalNutrition.protein,
+        carbs: totalNutrition.carbs,
+        fat: totalNutrition.fat,
         date: selectedDate,
         mealType: selectedMealType,
+        foods: addedFoods.map(food => ({
+          id: food.id,
+          name: food.name,
+          calories: food.calculatedNutrition.calories,
+          protein: food.calculatedNutrition.protein,
+          carbs: food.calculatedNutrition.carbs,
+          fat: food.calculatedNutrition.fat,
+          servingSize: food.servingSize,
+          servingUnit: food.servingUnit,
+        })),
       };
 
       Logger.log('MealAddScreen', 'Saving meal', newMeal);
@@ -359,6 +392,10 @@ const MealAddScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       // 3. Close modal
       setShowFoodSearch(false);
 
+      // 4. Add to selected foods list
+      setSelectedFoods(prev => [...prev, food]);
+      setShowSelectedFoods(true);
+
       Logger.log('MealAddScreen', 'Form filled successfully with food data');
     } catch (error) {
       Logger.error('MealAddScreen', 'Error handling food selection', error);
@@ -368,6 +405,99 @@ const MealAddScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       );
       setShowFoodSearch(false);
     }
+  };
+
+  /**
+   * Adds selected food to the meal
+   */
+  const addFoodToMeal = () => {
+    if (!selectedFood) {
+      Alert.alert('Hata', 'Lütfen bir besin seçin');
+      return;
+    }
+
+    const servingSizeNum = parseFloat(servingSize);
+    if (!servingSizeNum || servingSizeNum <= 0) {
+      Alert.alert('Hata', 'Lütfen geçerli bir porsiyon miktarı girin');
+      return;
+    }
+
+    const calculatedNutrition = calculateNutrition(selectedFood, servingSizeNum);
+    const foodWithNutrition = {
+      ...selectedFood,
+      servingSize: servingSizeNum,
+      servingUnit,
+      calculatedNutrition,
+    };
+
+    const newAddedFoods = [...addedFoods, foodWithNutrition];
+    setAddedFoods(newAddedFoods);
+    calculateTotalNutrition(newAddedFoods);
+
+    // Reset form
+    setSelectedFood(null);
+    setMealName('');
+    setCalories('');
+    setProtein('');
+    setCarbs('');
+    setFat('');
+    setServingSize('100');
+    setServingUnit('gram');
+
+    Logger.log('MealAddScreen', 'Food added to meal', { food: selectedFood.name, servingSize: servingSizeNum });
+  };
+
+  /**
+   * Removes food from meal
+   */
+  const removeFoodFromMeal = (index: number) => {
+    const newAddedFoods = addedFoods.filter((_, i) => i !== index);
+    setAddedFoods(newAddedFoods);
+    calculateTotalNutrition(newAddedFoods);
+    Logger.log('MealAddScreen', 'Food removed from meal', { index });
+  };
+
+  /**
+   * Adds all selected foods to meal at once
+   */
+  const addAllSelectedFoods = () => {
+    if (selectedFoods.length === 0) {
+      Alert.alert('Hata', 'Lütfen en az bir besin seçin');
+      return;
+    }
+
+    const foodsToAdd = selectedFoods.map(food => {
+      const servingSizeNum = parseFloat(servingSize) || 100;
+      const calculatedNutrition = calculateNutrition(food, servingSizeNum);
+      return {
+        ...food,
+        servingSize: servingSizeNum,
+        servingUnit,
+        calculatedNutrition,
+      };
+    });
+
+    const newAddedFoods = [...addedFoods, ...foodsToAdd];
+    setAddedFoods(newAddedFoods);
+    calculateTotalNutrition(newAddedFoods);
+
+    // Reset selected foods
+    setSelectedFoods([]);
+    setShowSelectedFoods(false);
+
+    Logger.log('MealAddScreen', 'All selected foods added to meal', { count: selectedFoods.length });
+  };
+
+  /**
+   * Removes food from selected foods list
+   */
+  const removeSelectedFood = (index: number) => {
+    const newSelectedFoods = selectedFoods.filter((_, i) => i !== index);
+    setSelectedFoods(newSelectedFoods);
+    if (newSelectedFoods.length === 0) {
+      setShowSelectedFoods(false);
+    }
+    Logger.log('MealAddScreen', 'Food removed from selected list', { index });
   };
 
   return (
@@ -632,6 +762,113 @@ const MealAddScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
               maxLength={5}
             />
           </View>
+
+          {/* Besin Ekle Butonu */}
+          {selectedFood && (
+            <Button
+              title="➕ Bu Besini Ekle"
+              onPress={addFoodToMeal}
+              style={styles.addFoodButton}
+            />
+          )}
+
+          {/* Seçilen Besinler Listesi */}
+          {showSelectedFoods && selectedFoods.length > 0 && (
+            <View style={styles.selectedFoodsContainer}>
+              <Text style={styles.sectionTitle}>Seçilen Besinler ({selectedFoods.length})</Text>
+              {selectedFoods.map((food, index) => (
+                <View key={index} style={styles.selectedFoodItem}>
+                  <View style={styles.foodInfo}>
+                    <Text style={styles.foodName}>{food.name}</Text>
+                    <Text style={styles.foodServing}>
+                      {food.calories} kcal - P: {food.protein}g, K: {food.carbs}g, Y: {food.fat}g
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => removeSelectedFood(index)}
+                  >
+                    <Text style={styles.removeButtonText}>❌</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <Button
+                title={`➕ Tümünü Ekle (${selectedFoods.length} besin)`}
+                onPress={addAllSelectedFoods}
+                style={styles.addAllButton}
+              />
+            </View>
+          )}
+
+          {/* Eklenen Besinler Listesi */}
+          {addedFoods.length > 0 && (
+            <View style={styles.addedFoodsContainer}>
+              <Text style={styles.sectionTitle}>Eklenen Besinler</Text>
+              {addedFoods.map((food, index) => (
+                <View key={index} style={styles.addedFoodItem}>
+                  <View style={styles.foodInfo}>
+                    <Text style={styles.foodName}>{food.name}</Text>
+                    <Text style={styles.foodServing}>
+                      {food.servingSize} {food.servingUnit}
+                    </Text>
+                  </View>
+                  <View style={styles.foodNutrition}>
+                    <Text style={styles.nutritionText}>
+                      {food.calculatedNutrition.calories} kcal
+                    </Text>
+                    <Text style={styles.nutritionText}>
+                      P: {food.calculatedNutrition.protein}g
+                    </Text>
+                    <Text style={styles.nutritionText}>
+                      K: {food.calculatedNutrition.carbs}g
+                    </Text>
+                    <Text style={styles.nutritionText}>
+                      Y: {food.calculatedNutrition.fat}g
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => removeFoodFromMeal(index)}
+                  >
+                    <Text style={styles.removeButtonText}>❌</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Toplam Besin Değerleri */}
+          {addedFoods.length > 0 && (
+            <View style={styles.totalNutritionContainer}>
+              <Text style={styles.sectionTitle}>Toplam Besin Değerleri</Text>
+              <View style={styles.totalNutritionGrid}>
+                <View style={styles.totalNutritionItem}>
+                  <Text style={styles.totalNutritionLabel}>Kalori</Text>
+                  <Text style={styles.totalNutritionValue}>
+                    {totalNutrition.calories} kcal
+                  </Text>
+                </View>
+                <View style={styles.totalNutritionItem}>
+                  <Text style={styles.totalNutritionLabel}>Protein</Text>
+                  <Text style={styles.totalNutritionValue}>
+                    {totalNutrition.protein}g
+                  </Text>
+                </View>
+                <View style={styles.totalNutritionItem}>
+                  <Text style={styles.totalNutritionLabel}>Karbonhidrat</Text>
+                  <Text style={styles.totalNutritionValue}>
+                    {totalNutrition.carbs}g
+                  </Text>
+                </View>
+                <View style={styles.totalNutritionItem}>
+                  <Text style={styles.totalNutritionLabel}>Yağ</Text>
+                  <Text style={styles.totalNutritionValue}>
+                    {totalNutrition.fat}g
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
 
           {/* Macronutrients Section */}
           <View style={styles.section}>
@@ -980,6 +1217,94 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#EF4444',
     fontWeight: '700',
+  },
+  addFoodButton: {
+    backgroundColor: Colors.primary.main,
+    marginVertical: 16,
+  },
+  addedFoodsContainer: {
+    marginVertical: 16,
+    padding: 16,
+    backgroundColor: Colors.background.secondary,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
+  },
+  addedFoodItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral[200],
+  },
+  foodInfo: {
+    flex: 1,
+  },
+  foodName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  foodServing: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+  },
+  foodNutrition: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  nutritionText: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    marginRight: 8,
+  },
+  totalNutritionContainer: {
+    marginVertical: 16,
+    padding: 16,
+    backgroundColor: Colors.primary.main + '10',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.primary.main,
+  },
+  totalNutritionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  totalNutritionItem: {
+    width: '48%',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  totalNutritionLabel: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    marginBottom: 4,
+  },
+  totalNutritionValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.primary.main,
+  },
+  selectedFoodsContainer: {
+    marginVertical: 16,
+    padding: 16,
+    backgroundColor: Colors.background.tertiary,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.neutral[300],
+  },
+  selectedFoodItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral[200],
+  },
+  addAllButton: {
+    backgroundColor: Colors.secondary.main,
+    marginTop: 16,
   },
   divider: {
     flexDirection: 'row',
